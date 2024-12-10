@@ -91,7 +91,7 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE,collapse = T)
 ```{r ssn_obs_preds}
 # now bringing predpts 2019-2022 combined
 # current ssn
-j_ssn1a <- SSN2::ssn_import("ssn_objects/James_071024_pluspreds.ssn", predpts = c("Preds_2019_2022"),
+j_ssn1a <- SSN2::ssn_import("ssn_object/James_071024_pluspreds.ssn", predpts = c("Preds_2019_2022"),
 overwrite = FALSE)
 
 # previous ssn
@@ -1066,7 +1066,7 @@ loocv(z4ssn_wswq_ml1)
 
 # plot(a4ssn_wswq_ml1, which = c(1:6))
 
-tidy(a4ssn_wswq_reml1)
+# tidy(a4ssn_wswq_reml1)
 
 # inserted r in file name to indicate residuals now included
 a4rssn_wswq_ml1 <- augment(a4ssn_wswq_ml1, drop = FALSE)
@@ -1092,9 +1092,19 @@ ggplot(DFobs3a, aes(x = dist_nearest_up_wb_km, y = vsci)) + geom_point() + facet
 
 ggplot(DFobs3a, aes(x = dist_nearest_up_wb_km, y = vsci)) + geom_point() + geom_smooth(method = "lm", se =TRUE)
 
+# get out j_ssn3 data and adjust with jitter to dist_nearest_up_wb_km
+# this effectively creates a giant spread so that there's almost 0 observed effect for the change of dist_nearest_up_wb_km when wbc is absent
+jitter_obs = ssn_get_data(j_ssn3)
+jitter_obs$dist_nearest_up_wb_km[jitter_obs$wbc == "absent"] =  runif(nrow(jitter_obs[jitter_obs$wbc == "absent",]), -100000000000, 100000000000)
+
+# put back into an ssn object
+jit_ssn = SSN2::ssn_put_data(jitter_obs,j_ssn3)
+# flip order of levels so we get present as an effect
+levels(jitter_obs$wbc) = c("absent","present")
+
 a5ssn_wswq_ml1 <- ssn_lm(
-  formula = vsci ~ pct_imp_w_emplog + elev_ws + do + vahusb_JL + dist_nearest_up_wb_km,
-  ssn.object = j_ssn3,
+  formula = vsci ~ pct_imp_w_emplog + elev_ws + do + vahusb_JL + wbc+  wbc:dist_nearest_up_wb_km - dist_nearest_up_wb_km,
+  ssn.object = jit_ssn,
   tailup_type = "none",
   taildown_type = "exponential",
   euclid_type = "exponential",
